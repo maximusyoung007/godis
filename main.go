@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"godis/dataStructure"
 	"unsafe"
 )
 
@@ -32,5 +31,5 @@ func main() {
 	fmt.Println(s.a)
 	fmt.Println(t.a)
 
-	dataStructure.Test()
+	//dataStructure.Test()
 }

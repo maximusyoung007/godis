@@ -46,14 +46,20 @@ func getSdshdr(s sds) *sdshdr {
 	return (*sdshdr)(unsafe.Pointer((uintptr)(unsafe.Pointer(s)) - fieldOffSet))
 }
 
-//已使用的长度
+// SdsLen 已使用的长度
 func SdsLen(s sds) int {
 	sh := getSdshdr(s)
 	return sh.len
 }
 
-//未使用的长度
+// SdsAvail 未使用的长度
 func SdsAvail(s sds) int {
 	sh := getSdshdr(s)
 	return sh.free
+}
+
+// SdsDup 复制一个sds
+func SdsDup(s sds) sds {
+	ts := string(*s)
+	return SdsNewLen(ts, SdsLen(s))
 }
