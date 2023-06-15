@@ -141,3 +141,10 @@ func SdsTrim(s sds, cSet string) {
 		sh.len = newLen
 	}
 }
+
+func SdsClear(s sds) {
+	sh := getSdshdr(s)
+	sh.free = sh.free + sh.len
+	sh.len = 0
+	sh.buf = []rune{}
+}
