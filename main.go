@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"unsafe"
 )
 
@@ -26,10 +25,10 @@ func t2(t *[]rune) *T {
 
 func main() {
 	//f := F{1, 1}
-	t := T{1, 1, []rune{'a'}}
-	s := t2(&t.r)
-	fmt.Println(s.a)
-	fmt.Println(t.a)
+	//t := T{1, 1, []rune{'a'}}
+	//s := t2(&t.r)
+	//fmt.Println(s.a)
+	//fmt.Println(t.a)
 
 	//dataStructure.Test()
 }
