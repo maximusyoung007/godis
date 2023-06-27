@@ -31,9 +31,9 @@ func SdsEmpty() sds {
 }
 
 func SdsNewLen(s string, initLen int) sds {
-	r := make([]rune, 0)
+	r := make([]rune, initLen)
 	for i := 0; i < initLen; i++ {
-		r = append(r, rune(s[i]))
+		r[i] = rune(s[i])
 	}
 	sh := sdshdr{initLen, 0, r}
 	return &sh.buf
@@ -156,20 +156,21 @@ func SdsCat(s sds, t string) sds {
 }
 
 // SdsCatLen 将长度为len的字符串t追加到sds后
-func SdsCatLen(s sds, t string, len int) sds {
+func SdsCatLen(s sds, t string, length int) sds {
 	curLen := SdsLen(s)
-	s = SdsMakeRoomFor(s, len)
-	sh := getSdshdr(s)
-	sh.len = curLen + len
-	//右边的free为扩容以后的
-	sh.free = sh.free - len
-	//r := make([]rune, 0)
-	for i := 0; i < len; i++ {
-		*s = append(*s, rune(t[i]))
-	}
-	sh.buf = *s
+	s = SdsMakeRoomFor(s, length)
 
-	return s
+	sh := getSdshdr(s)
+	sh.len = curLen + length
+	//右边的free为扩容以后的
+	sh.free = sh.free - length
+	k := 0
+	for i := length - 1; i < sh.len && k < len(t); i++ {
+		(*s)[i] = rune(t[k])
+		k++
+	}
+
+	return &sh.buf
 }
 
 func SdsCatSds(s sds, t sds) sds {
@@ -177,7 +178,7 @@ func SdsCatSds(s sds, t sds) sds {
 	return SdsCatLen(s, str, len(str))
 }
 
-// SdsMakeRoomFor 字符串扩容
+// SdsMakeRoomFor 字符串扩容,拥有addLen的空余长度
 func SdsMakeRoomFor(s sds, addLen int) sds {
 	var sh *sdshdr
 	var newSh *sdshdr
@@ -187,12 +188,14 @@ func SdsMakeRoomFor(s sds, addLen int) sds {
 		return s
 	}
 
-	var len, newLen int
+	var length, newLen int
 
-	len = SdsLen(s)
+	length = SdsLen(s)
 	sh = getSdshdr(s)
 
-	newLen = len + addLen
+	newLen = length + addLen
+	newSh = sh
+	newSh.len = newLen
 
 	if newLen < SDS_MAX_PREALLOC {
 		newLen *= 2
@@ -200,8 +203,13 @@ func SdsMakeRoomFor(s sds, addLen int) sds {
 		newLen += SDS_MAX_PREALLOC
 	}
 
-	newSh = sh
-	newSh.free = newLen - len
+	newS := make([]rune, newSh.len, newLen)
+	for i := 0; i < len(newSh.buf); i++ {
+		newS[i] = newSh.buf[i]
+	}
+
+	newSh.buf = newS
+	newSh.free = newLen - length
 
 	return &newSh.buf
 }
@@ -212,25 +220,25 @@ func SdsCpy(s sds, t string) sds {
 }
 
 // SdsCpyLen 将t的前len个字符复制到s中，
-func SdsCpyLen(s sds, t string, len int) sds {
+func SdsCpyLen(s sds, t string, length int) sds {
 	sh := getSdshdr(s)
 	totalLen := sh.free + sh.len
-	if totalLen < len {
-		s = SdsMakeRoomFor(s, len-sh.len)
+	if totalLen < length {
+		s = SdsMakeRoomFor(s, length-sh.len)
 		sh = getSdshdr(s)
 		totalLen = sh.free + sh.len
 	}
 
-	sh.len = len
-	sh.free = totalLen - len
+	sh.len = length
+	sh.free = totalLen - length
 
-	r := make([]rune, 0)
-	for i := 0; i < len; i++ {
-		r = append(r, rune(t[i]))
+	r := make([]rune, length, totalLen)
+	for i := 0; i < length; i++ {
+		r[i] = rune(t[i])
 	}
 	sh.buf = r
 
-	return s
+	return &sh.buf
 }
 
 // SdsGrowZero 用空字符串将sds扩展到指定长度
