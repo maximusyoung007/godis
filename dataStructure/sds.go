@@ -5,6 +5,8 @@ import (
 	"unsafe"
 )
 
+const SDS_MAX_PREALLOC int = 1024 * 1024
+
 //用于指向sdshdr的buf属性
 type sds *[]rune
 
@@ -147,4 +149,121 @@ func SdsClear(s sds) {
 	sh.free = sh.free + sh.len
 	sh.len = 0
 	sh.buf = []rune{}
+}
+
+func SdsCat(s sds, t string) sds {
+	return SdsCatLen(s, t, len(t))
+}
+
+// SdsCatLen 将长度为len的字符串t追加到sds后
+func SdsCatLen(s sds, t string, len int) sds {
+	curLen := SdsLen(s)
+	s = SdsMakeRoomFor(s, len)
+	sh := getSdshdr(s)
+	sh.len = curLen + len
+	//右边的free为扩容以后的
+	sh.free = sh.free - len
+	//r := make([]rune, 0)
+	for i := 0; i < len; i++ {
+		*s = append(*s, rune(t[i]))
+	}
+	sh.buf = *s
+
+	return s
+}
+
+func SdsCatSds(s sds, t sds) sds {
+	str := string(*t)
+	return SdsCatLen(s, str, len(str))
+}
+
+// SdsMakeRoomFor 字符串扩容
+func SdsMakeRoomFor(s sds, addLen int) sds {
+	var sh *sdshdr
+	var newSh *sdshdr
+
+	free := SdsAvail(s)
+	if free > addLen {
+		return s
+	}
+
+	var len, newLen int
+
+	len = SdsLen(s)
+	sh = getSdshdr(s)
+
+	newLen = len + addLen
+
+	if newLen < SDS_MAX_PREALLOC {
+		newLen *= 2
+	} else {
+		newLen += SDS_MAX_PREALLOC
+	}
+
+	newSh = sh
+	newSh.free = newLen - len
+
+	return &newSh.buf
+}
+
+// SdsCpy 复制t到sds
+func SdsCpy(s sds, t string) sds {
+	return SdsCpyLen(s, t, len(t))
+}
+
+// SdsCpyLen 将t的前len个字符复制到s中，
+func SdsCpyLen(s sds, t string, len int) sds {
+	sh := getSdshdr(s)
+	totalLen := sh.free + sh.len
+	if totalLen < len {
+		s = SdsMakeRoomFor(s, len-sh.len)
+		sh = getSdshdr(s)
+		totalLen = sh.free + sh.len
+	}
+
+	sh.len = len
+	sh.free = totalLen - len
+
+	r := make([]rune, 0)
+	for i := 0; i < len; i++ {
+		r = append(r, rune(t[i]))
+	}
+	sh.buf = r
+
+	return s
+}
+
+// SdsGrowZero 用空字符串将sds扩展到指定长度
+func SdsGrowZero(s sds, len int) sds {
+	sh := getSdshdr(s)
+	var curLen int
+	if len < curLen {
+		return s
+	}
+	s = SdsMakeRoomFor(s, len-curLen)
+	sh = getSdshdr(s)
+	sh.len = len
+	return s
+}
+
+// SdsCmp 比较两个sds大小
+func SdsCmp(s1 sds, s2 sds) int {
+	l1 := SdsLen(s1)
+	l2 := SdsLen(s2)
+	i := 0
+	for i < l1 && i < l2 {
+		if (*s1)[i] > (*s2)[i] {
+			return 1
+		} else if (*s1)[i] < (*s2)[i] {
+			return -1
+		}
+		i++
+	}
+	if l1-i > 0 {
+		return 1
+	}
+	if l2-i > 0 {
+		return -1
+	}
+	return 0
 }
