@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"unsafe"
 )
 
@@ -31,4 +32,11 @@ func main() {
 	//fmt.Println(t.a)
 
 	//dataStructure.Test()
+
+	//a := 1
+	var a *int
+	a = nil
+	fmt.Println(a)
+
+	m := make(map[int]int, 0)
 }
